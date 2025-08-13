@@ -1,4 +1,5 @@
 python -m ae.train_ae --n-epochs 200 --z-size 32 --batch-size 8 --verbose 1 -f /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/dataset-generated-roads/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_4/images/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_1/images/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_3/images/
 
-ython -m ae.train_denoise_ae --n-epochs 200 --z-size 32 --batch-size 8 --verbose 1 -f /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/dataset-generated-roads/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_4/images/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_1/images/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_3/images
-/ --noise-type gaussian --noise-factor 0.1
+python -m ae.train_denoise_ae --n-epochs 600 --z-size 32 --batch-size 8 --verbose 1 -f /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/dataset-generated-roads/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_4/images/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_1/images/ /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/vae_3/images/ --noise-type gaussian --noise-factor 0.1 --ae-path /home/smukh039/work/pipelines/pipeline2/aae-train-donkeycar/logs/ae-32_1755106541.pkl
+
+python -m ae.test -f logs/dataset-test/ -ae logs/ae-32_1755110626_best.pkl --n-samples 10 -augment
