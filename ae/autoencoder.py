@@ -232,6 +232,7 @@ def preprocess_image(image: np.ndarray, convert_to_rgb: bool = False, normalize:
     :param normalize: Whether to normalize or not
     :return:
     """
+    # print("image shape = ", image.shape)
     assert image.shape == RAW_IMAGE_SHAPE, f"{image.shape} != {RAW_IMAGE_SHAPE}"
     # Crop
     # Region of interest

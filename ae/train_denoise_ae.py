@@ -29,6 +29,10 @@ parser.add_argument("--learning-rate", help="Learning rate", type=float, default
 parser.add_argument("--n-epochs", help="Number of epochs", type=int, default=10)
 parser.add_argument("--verbose", help="Verbosity", type=int, default=1)
 parser.add_argument("--num-threads", help="Number of threads for PyTorch (-1 to use default)", default=-1, type=int)
+#shilpa denoising ae
+# New arguments for denoising autoencoder
+parser.add_argument("--noise-type", help="Type of noise to add (gaussian, salt_pepper, dropout)", type=str, default="gaussian")
+parser.add_argument("--noise-factor", help="Factor controlling noise intensity", type=float, default=0.2)
 
 
 args = parser.parse_args()
@@ -45,6 +49,41 @@ if args.seed is not None:
         th.backends.cudnn.benchmark = False
 
 
+# Function to add noise to images
+def add_noise(images, noise_type='gaussian', noise_factor=0.2):
+    """
+    Add noise to a batch of images
+   
+    :param images: Tensor of images [batch_size, channels, height, width]
+    :param noise_type: Type of noise to add ('gaussian', 'salt_pepper', or 'dropout')
+    :param noise_factor: Factor controlling noise intensity
+    :return: Noisy images
+    """
+    noisy_images = images.clone()
+   
+    if noise_type == 'gaussian':
+        # Add Gaussian noise
+        noise = th.randn_like(noisy_images) * noise_factor
+        noisy_images = noisy_images + noise
+        # Clip to ensure values stay in valid range [0, 1]
+        noisy_images = th.clamp(noisy_images, 0., 1.)
+       
+    elif noise_type == 'salt_pepper':
+        # Add salt and pepper noise
+        prob = th.rand_like(noisy_images)
+        # Salt noise (white pixels)
+        salt_mask = prob < (noise_factor / 2)
+        noisy_images[salt_mask] = 1.0
+        # Pepper noise (black pixels)
+        pepper_mask = (prob >= (noise_factor / 2)) & (prob < noise_factor)
+        noisy_images[pepper_mask] = 0.0
+       
+    elif noise_type == 'dropout':
+        # Randomly drop pixels (set to 0)
+        mask = th.rand_like(noisy_images) > noise_factor
+        noisy_images = noisy_images * mask
+       
+    return noisy_images
 
 
 folders, images = [], []
@@ -98,12 +137,15 @@ try:
         pbar = tqdm(total=len(minibatchlist))
         train_loss = 0
         for obs, target_obs in data_loader:
-            obs = th.as_tensor(obs).to(autoencoder.device)
-            target_obs = th.as_tensor(target_obs).to(autoencoder.device)
+
+            clean_obs = th.as_tensor(obs).to(autoencoder.device)
+            target_obs = th.as_tensor(target_obs).to(autoencoder.device)           
+            # Add noise to the input images
+            noisy_obs = add_noise(clean_obs, args.noise_type, args.noise_factor)
+
 
             autoencoder.optimizer.zero_grad()
-
-            predicted_obs = autoencoder.forward(obs)
+            predicted_obs = autoencoder.forward(noisy_obs)
             loss = F.mse_loss(predicted_obs, target_obs)
 
             loss.backward()
@@ -131,13 +173,25 @@ try:
             if ROI[2] != INPUT_DIM[1] or ROI[3] != INPUT_DIM[0]:
                 im = cv2.resize(im, (INPUT_DIM[1], INPUT_DIM[0]), interpolation=cv2.INTER_AREA)
 
-            encoded = autoencoder.encode(im)
-            reconstructed_image = autoencoder.decode(encoded)[0]
-            # Plot reconstruction
+             # Create a tensor from the image
+            clean_tensor = th.as_tensor(im.astype(np.float32) / 255.0).permute(2, 0, 1).to(autoencoder.device)
+
+            # Add noise to the image
+            noisy_tensor = add_noise(clean_tensor, args.noise_type, args.noise_factor)
+
+            # Convert to NumPy array before encoding
+            noisy_tensor_np = noisy_tensor.cpu().detach().numpy().transpose(1, 2, 0)  # Change shape to (height, width, channels)
+
+            # Encode the noisy image
+            encoded = autoencoder.encode(noisy_tensor_np)  # Pass the numpy array
+
+            # Decode to get the reconstructed image
+            reconstructed_tensor = autoencoder.decode(encoded)[0]
+
             cv2.imshow("Original", image)
             cv2.imshow("Cropped", im)
-            cv2.imshow("Reconstruction", reconstructed_image)
-
+            cv2.imshow("Noisy Input", noisy_tensor_np)
+            cv2.imshow("Reconstruction", reconstructed_tensor)
 
             cv2.waitKey(1)
 except KeyboardInterrupt:

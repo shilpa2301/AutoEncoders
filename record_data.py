@@ -83,7 +83,9 @@ window = pygame.display.set_mode((400, 400), RESIZABLE)
 
 control_throttle, control_steering = 0, 0
 
-env = gym.make("donkey-mountain-track-v0")
+# env = gym.make("donkey-mountain-track-v0")
+#shilpa
+env = gym.make("donkey-generated-roads-v0")
 obs = env.reset()
 for frame_num in range(total_frames):
     x, theta = 0, 0
